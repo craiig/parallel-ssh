@@ -69,6 +69,11 @@ class Task(object):
         except AttributeError:
             self.inline_stdout = False
 
+        try:
+            self.soft_kill = bool(opts.soft_kill)
+        except AttributeError:
+            self.soft_kill = False
+
     def start(self, nodenum, iomap, writer, askpass_socket=None):
         """Starts the process and registers files with the IOMap."""
         self.writer = writer
@@ -102,7 +107,9 @@ class Task(object):
             self.stdin = self.proc.stdin
             iomap.register_write(self.stdin.fileno(), self.handle_stdin)
         else:
-            self.proc.stdin.close()
+            if not self.soft_kill:
+                self.proc.stdin.close()
+
         self.stdout = self.proc.stdout
         iomap.register_read(self.stdout.fileno(), self.handle_stdout)
         self.stderr = self.proc.stderr
@@ -111,11 +118,14 @@ class Task(object):
     def _kill(self):
         """Signals the process to terminate."""
         if self.proc:
-            try:
-                os.kill(-self.proc.pid, signal.SIGKILL)
-            except OSError:
-                # If the kill fails, then just assume the process is dead.
-                pass
+            if self.soft_kill:
+                self.proc.stdin.write('\x03')
+            else:
+                try:
+                    os.kill(-self.proc.pid, signal.SIGKILL)
+                except OSError:
+                    # If the kill fails, then just assume the process is dead.
+                    pass
             self.killed = True
 
     def timedout(self):

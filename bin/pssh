@@ -42,6 +42,8 @@ def option_parser():
             help='read from standard input and send as input to ssh')
     parser.add_option('-P', '--print', dest='print_out', action='store_true',
             help='print output as we get it')
+    parser.add_option('--soft_kill', dest='soft_kill', action='store_true',
+            help='write ctrl+c char (0x03) to processes instead of sending SIGKILL on termination')
 
     return parser
 
